@@ -1,64 +1,80 @@
+# Lindas Lustfyllda Bud & Åkeri – Optimeringsalgoritm
 
+Detta projekt löser en “lastbils-knapsack” för Lindas Lustfyllda Bud & Åkeri med hjälp av en genetisk algoritm. Programmet väljer automatiskt vilka paket som ska lastas på 10 budbilar så att vinsten maximeras och straffavgifter minimeras.
 
-# Lindas Lustfyllda Bud & Åkeri - Optimeringsalgoritm
+## Funktioner
 
-Detta projekt implementerar en genetisk algoritm (Genetic Algorithm) för att optimera lastningen av budbilar. Målet är att maximera vinsten genom att välja rätt paket för leverans, samtidigt som man tar hänsyn till begränsningar i vikt, volym och deadlines.
+- Läser daglig lagerfil (`CSV`) med vikt, volym, vinstkategori och deadlines.
+- Optimerar lastning via genetisk algoritm:
+  - Permutationsrepresentation av paketlistan.
+  - Tournament Selection + elitism.
+  - Partially Matched Crossover (PMX-liknande).
+  - Mutation med små swappar (~1 % av listan).
+- Dynamisk “triage”-fitness:
+  - Riktig vinst per paket (`profit − penalty` om sent).
+  - Extra bonus motsvarande straffkostnaden som undviks genom att lasta paketet idag.
+  - Straff för sena paket som lämnas kvar i lagret.
+- Resultatrapport:
+  - Vinster och fyllnadsgrad per lastbil.
+  - Histogram + statistik (medel, varians, standardavvikelse) för levererade respektive kvarvarande paket.
+  - Total straffavgift och missad vinst i lagret.
+- Exporter:
+  - `Data/Lastningsplan.csv` (vilket paket hamnar i vilken bil).
+  - `Data/Statistics.csv` (fitnessförbättringar över generationerna).
+  - Graf över bästa fitness per generation.
 
-## Projektbeskrivning
+## Krav
 
-Programmet läser in en lista med paket från en CSV-fil (`lagerstatus.csv` eller liknande) och använder en evolutionär algoritm för att hitta den bästa kombinationen av paket att lasta på 10 lastbilar.
+- Python 3.11+
+- Beroenden: `numpy`, `matplotlib` m.fl. (se `requirements.txt`)
 
-### Begränsningar och Regler
-*   **Antal bilar:** 10 st
-*   **Maxvikt per bil:** 800 kg
-*   **Maxvolym per bil:** 1000 m³ (enligt uppdaterade krav)
-*   **Vinst:** Varje paket har ett vinstvärde.
-*   **Straffavgift:** Paket som levereras efter deadline ger en straffavgift.
+Installera:
 
-## Installation
+```bash
+python -m venv venv
+venv\Scripts\activate        # PowerShell/cmd på Windows
+pip install -r requirements.txt
+```
 
-1.  Klona detta repository.
-2.  Skapa en virtuell miljö (rekommenderas):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # På Windows: venv\Scripts\activate
-    ```
-3.  Installera beroenden:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## Körning
 
-## Användning
-
-Kör huvudprogrammet med:
+1. Placera dagens lagerfil i `data/` (exempel: `TestData1.csv`).
+2. Kör huvudprogrammet:
 
 ```bash
 python main.py
 ```
 
-Programmet kommer att:
-1.  Läsa in data.
-2.  Köra den genetiska algoritmen över ett antal generationer.
-3.  Visa en graf över förbättringen av "fitness" (vinst).
-4.  Skriva ut detaljerad statistik för varje lastbil.
-5.  Visa statistik för levererade paket och kvarvarande paket i lager.
+3. Programmet skriver ut:
+   - Bästa fitness, vinst per bil och slutresultat för dagen.
+   - Analys av levererade paket och de som blev kvar.
+4. Se genererade filer i `Data/`.
 
-## Filstruktur
+## Struktur
 
-*   `main.py`: Huvudprogrammet som knyter ihop allt.
-*   `ga.py`: Innehåller logiken för den genetiska algoritmen (population, selektion, crossover, mutation).
-*   `models.py`: Datamodeller för `Package` och `Truck`.
-*   `analysis.py`: Funktioner för att analysera och visualisera resultat.
-*   `data/`: Mapp för indata (CSV-filer).
+| Fil                | Innehåll                                                                           |
+|--------------------|-------------------------------------------------------------------------------------|
+| `main.py`          | Kopplar ihop allt: laddar data, kör GA, skriver rapport, sparar filer.             |
+| `ga.py`            | GA-komponenter (fitness, population, selektion, crossover, mutation, loop).        |
+| `models.py`        | `Package` och `Truck` med kapacitetslogik.                                         |
+| `analysis.py`      | Statistik, histogram, slutrapport, CSV-export.                                    |
+| `requirements.txt` | Python-beroenden.                                                                  |
 
-## Algoritm
+## Motivering av GA-val
 
-Lösningen använder en genetisk algoritm med följande egenskaper:
-*   **Representation:** En lista av paket som permuteras.
-*   **Fitness-funktion:** Total vinst för alla lastade paket minus eventuella straffavgifter.
-*   **Selektion:** Tournament Selection för att välja föräldrar.
-*   **Elitism:** Den bästa lösningen från varje generation bevaras alltid.
-*   **Crossover & Mutation:** Skapar variation för att hitta nya, bättre lösningar.
+- **Elitism:** Garanti att bästa lösningen överlever varje generation – vi tappar aldrig en “bra lastplan”.
+- **Tournament Selection:** Ger balanserat selektionstryck: bra individer vinner oftare men även svagare får chansen, vilket ger variation.
+- **Mutation via små swappar:** Förhindrar att populationen stagnerar men förstör inte bra lösningar helt (viktigt när listorna är stora).
+- **Triage-bonus:** Bonusen motsvarar exakt den straffavgift som skulle tillkomma imorgon, vilket gör att algoritmen prioriterar paket med potentiellt explosiv kostnad utan hårdkodade poäng.
 
-## Författare
-Andreas Hagen
+## Begränsningar / Vidare arbete
+
+- Input-filen kan vara mycket större än vad 10 bilar klarar på en dag, vilket innebär att totalresultatet ofta blir negativt p.g.a. lagrets straffavgifter. Detta speglar affärsregeln snarare än en algoritm-bugg och kan beskrivas i rapporten.
+- För fler-dagssimuleringar behöver `deadline` och lagrets innehåll uppdateras mellan körningarna.
+- Möjliga förbättringar: filtrera fram “dagens planeringspool” (t.ex. topp 2 000 paket), testa annan crossover eller adaptiv mutation.
+
+## Licens / Författare
+
+- Kurs: Applicerad AI
+- Student: Andreas Hagen
+- Programmet utvecklat som inlämningsuppgift vid Teknikhögskolan.

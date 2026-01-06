@@ -12,6 +12,8 @@ pip-delete-this-directory.txt
 
 # Data
 Data/TestData1.csv
+Data/Statistics.csv
+Data/Lastningsplan.csv
 
 # VS Code
 .vscode/
